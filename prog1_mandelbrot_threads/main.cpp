@@ -46,6 +46,7 @@ void usage(const char* progname) {
     printf("Program Options:\n");
     printf("  -t  --threads <N>  Use N threads\n");
     printf("  -v  --view <INT>   Use specified view settings\n");
+    printf("  -m  --multi        Only run multi-threaded version\n");
     printf("  -?  --help         This message\n");
 }
 
@@ -72,6 +73,7 @@ int main(int argc, char** argv) {
     const unsigned int height = 1200;
     const int maxIterations = 256;
     int numThreads = 2;
+    bool runSerial = true;
 
     float x0 = -2;
     float x1 = 1;
@@ -83,11 +85,12 @@ int main(int argc, char** argv) {
     static struct option long_options[] = {
         {"threads", 1, 0, 't'},
         {"view", 1, 0, 'v'},
+        {"multi", 0, 0, 'm'},
         {"help", 0, 0, '?'},
         {0 ,0, 0, 0}
     };
 
-    while ((opt = getopt_long(argc, argv, "t:v:?", long_options, NULL)) != EOF) {
+    while ((opt = getopt_long(argc, argv, "t:v:m?", long_options, NULL)) != EOF) {
 
         switch (opt) {
         case 't':
@@ -110,6 +113,11 @@ int main(int argc, char** argv) {
             }
             break;
         }
+        case 'm':
+        {
+            runSerial = false;
+            break;
+        }
         case '?':
         default:
             usage(argv[0]);
@@ -118,7 +126,6 @@ int main(int argc, char** argv) {
     }
     // end parsing of commandline options
 
-
     int* output_serial = new int[width*height];
     int* output_thread = new int[width*height];
     
@@ -126,19 +133,21 @@ int main(int argc, char** argv) {
     // Run the serial implementation.  Run the code three times and
     // take the minimum to get a good estimate.
     //
-
     double minSerial = 1e30;
-    for (int i = 0; i < 5; ++i) {
-       memset(output_serial, 0, width * height * sizeof(int));
-        double startTime = CycleTimer::currentSeconds();
-        mandelbrotSerial(x0, y0, x1, y1, width, height, 0, height, maxIterations, output_serial);
-        double endTime = CycleTimer::currentSeconds();
-        minSerial = std::min(minSerial, endTime - startTime);
+
+    if(runSerial)
+    {
+        for (int i = 0; i < 5; ++i) {
+        memset(output_serial, 0, width * height * sizeof(int));
+            double startTime = CycleTimer::currentSeconds();
+            mandelbrotSerial(x0, y0, x1, y1, width, height, 0, height, maxIterations, output_serial);
+            double endTime = CycleTimer::currentSeconds();
+            minSerial = std::min(minSerial, endTime - startTime);
+        }
+
+        printf("[mandelbrot serial]:\t\t[%.3f] ms\n", minSerial * 1000);
+        writePPMImage(output_serial, width, height, "mandelbrot-serial.ppm", maxIterations);
     }
-
-    printf("[mandelbrot serial]:\t\t[%.3f] ms\n", minSerial * 1000);
-    writePPMImage(output_serial, width, height, "mandelbrot-serial.ppm", maxIterations);
-
     //
     // Run the threaded version
     //
@@ -155,17 +164,21 @@ int main(int argc, char** argv) {
     printf("[mandelbrot thread]:\t\t[%.3f] ms\n", minThread * 1000);
     writePPMImage(output_thread, width, height, "mandelbrot-thread.ppm", maxIterations);
 
-    if (! verifyResult (output_serial, output_thread, width, height)) {
-        printf ("Error : Output from threads does not match serial output\n");
+    if(runSerial)
+    {
+        if (! verifyResult (output_serial, output_thread, width, height)) {
+            printf ("Error : Output from threads does not match serial output\n");
 
-        delete[] output_serial;
-        delete[] output_thread;
+            delete[] output_serial;
+            delete[] output_thread;
 
-        return 1;
+            return 1;
+        }
     }
 
     // compute speedup
-    printf("\t\t\t\t(%.2fx speedup from %d threads)\n", minSerial/minThread, numThreads);
+    if(runSerial)
+        printf("\t\t\t\t(%.2fx speedup from %d threads)\n", minSerial/minThread, numThreads);
 
     delete[] output_serial;
     delete[] output_thread;
