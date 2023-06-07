@@ -38,15 +38,25 @@ void workerThreadStart(WorkerArgs * const args) {
     // printf("Hello world from thread %d\n", args->threadId);
 
     // Split task by rows
-    const static int rowsPerThread = args->height / args->numThreads;
-    const int startRow = args->threadId * rowsPerThread;
-    const int totalRows = (args->threadId == args->numThreads - 1)
-                              ? args->height - startRow
-                              : rowsPerThread;
 
-    mandelbrotSerial(args->x0, args->y0, args->x1, args->y1, args->width,
-                     args->height, startRow, totalRows,
-                     args->maxIterations, args->output);
+    // Bulk version
+    // const static int rowsPerThread = args->height / args->numThreads;
+    // const int startRow = args->threadId * rowsPerThread;
+    // const int totalRows = (args->threadId == args->numThreads - 1)
+    //                           ? args->height - startRow
+    //                           : rowsPerThread;
+    // mandelbrotSerial(args->x0, args->y0, args->x1, args->y1, args->width,
+    //                  args->height, startRow, totalRows,
+    //                  args->maxIterations, args->output);
+
+    // Interleaved version, worse for cache
+    // but task is more evenly distributed
+    // TODO: compare performance using perf & valgrind
+    for(unsigned int i = args->threadId; i < args->height; i += args->numThreads) {
+        mandelbrotSerial(args->x0, args->y0, args->x1, args->y1, args->width,
+                         args->height, i, 1,
+                         args->maxIterations, args->output);
+    }
 }
 
 //
