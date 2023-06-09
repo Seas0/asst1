@@ -37,9 +37,14 @@ void workerThreadStart(WorkerArgs * const args) {
     
     // printf("Hello world from thread %d\n", args->threadId);
 
+    double startTime = CycleTimer::currentSeconds();
     // Split task by rows
 
     // Bulk version
+    // task is not evenly distributed
+    // as Mandelbrot set converges slower
+    // at the edges
+    // so critical path is the slowest batch
     // const static int rowsPerThread = args->height / args->numThreads;
     // const int startRow = args->threadId * rowsPerThread;
     // const int totalRows = (args->threadId == args->numThreads - 1)
@@ -57,6 +62,8 @@ void workerThreadStart(WorkerArgs * const args) {
                          args->height, i, 1,
                          args->maxIterations, args->output);
     }
+    double endTime = CycleTimer::currentSeconds();
+    printf("[mandelbrot thread](%d):\t\t[%.3f] ms\n", args->threadId, (endTime - startTime) * 1000);
 }
 
 //
