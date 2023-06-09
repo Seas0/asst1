@@ -4,7 +4,7 @@
 #include <math.h>
 
 #include "CycleTimer.h"
-#include "sqrt_ispc.h"
+#include "objs/sqrt_ispc.h"
 
 using namespace ispc;
 
@@ -34,7 +34,20 @@ int main() {
         // to you generate best and worse-case speedups
         
         // starter code populates array with random input values
-        values[i] = .001f + 2.998f * static_cast<float>(rand()) / RAND_MAX;
+        // values[i] = .001f + 2.998f * static_cast<float>(rand()) / RAND_MAX;
+        
+        // Worst case: all values are 1 except for one value,
+        // critical path is that one value
+        // converge in around 30 iterations
+        // ISPC speedup is around 0.9x
+        // ISPC with tasks speedup is around 8x
+        values[i] = (i % 8) ? 1.f : 2.999f;
+
+        // Best case: all values are 2.99f,
+        // converge in around 30 iterations
+        // ISPC speedup is around 6x
+        // ISPC with tasks speedup is around 60x
+        // values[i] = 2.999f;
     }
 
     // generate a gold version to check results
